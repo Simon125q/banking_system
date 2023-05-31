@@ -19,8 +19,8 @@ typedef struct Client
     char surname[MAX_SURNAME];
     char pesel[MAX_PESEL];
     char address[MAX_ADDRESS];
-    double balance;
-    double savings;
+    long int balance;
+    long int savings;
 } CLIENT;
 
 CLIENT found_client;
@@ -32,7 +32,7 @@ int Confirmation();
 void My_Scanf(char *text, int size);
 void Add_Account();
 int Check_String(char to_check[], int full_check);
-int Check_Money(double sum, double balance, int full_check);
+int Check_Money(long int sum, long int balance, int full_check);
 void Print_All();
 void Print_Account(CLIENT to_show);
 CLIENT *Search_Account();
@@ -62,7 +62,10 @@ int confirmation()
 {
     char decision;
     printf("Do you confirm it? Y/N\n");
+    Clear_Buff();
     decision = getchar();
+
+    Clear_Buff();
     if (decision == 'y' || decision == 'Y')
         return TRUE;
     return FALSE;
@@ -146,7 +149,7 @@ int Check_String(char to_check[], int full_check)
             printf("String should not contain digits!\n");
             return FALSE;
         }
-        if (isspace(to_check[index]) && index < length-1 && isspace(to_check[index-1]))
+        if (isspace(to_check[index]) && index < length - 1 && isspace(to_check[index - 1]))
         {
             printf("String should not contain 2 spaces next to each other!\n");
             return FALSE;
@@ -160,7 +163,7 @@ int Check_String(char to_check[], int full_check)
     return TRUE;
 }
 
-int Check_Money(double sum, double balance, int full_check)
+int Check_Money(long int sum, long int balance, int full_check)
 {
     if (full_check && sum > balance)
     {
@@ -179,26 +182,27 @@ void My_Scanf(char text[], int size)
 {
     int go = TRUE;
     int end_line = FALSE;
-    while(go){
-            fgets(text, size, stdin);
-            int index = 0;
-            int length = strlen(text);
-            for (index = 0; index < length; index++)
+    while (go)
+    {
+        fgets(text, size, stdin);
+        int index = 0;
+        int length = strlen(text);
+        for (index = 0; index < length; index++)
+        {
+            if (text[index] == '\n')
             {
-                if (text[index]=='\n')
-                {
-                    text[index]='\0';
-                    end_line = TRUE;
-                    go = FALSE;
-                }
-            }
-            if(!end_line)
-            {
-                Clear_Buff();
-                printf("String is too long\n");
-                printf("Provide it again: ");
+                text[index] = '\0';
+                end_line = TRUE;
+                go = FALSE;
             }
         }
+        if (!end_line)
+        {
+            Clear_Buff();
+            printf("String is too long\n");
+            printf("Provide it again: ");
+        }
+    }
 }
 
 void Add_Account()
@@ -213,7 +217,7 @@ void Add_Account()
     {
         printf("Provide your name: ");
         My_Scanf(new_client.name, MAX_NAME);
-        if(Check_String(new_client.name, TRUE))
+        if (Check_String(new_client.name, TRUE))
             correct = TRUE;
     }
     correct = FALSE;
@@ -249,7 +253,7 @@ void Add_Account()
     {
         printf("Provide your address: ");
         My_Scanf(new_client.address, MAX_ADDRESS);
-        if(Check_String(new_client.address, FALSE))
+        if (Check_String(new_client.address, FALSE))
             correct = TRUE;
     }
     printf("\n\n");
@@ -298,14 +302,16 @@ void Print_All()
 
 void Print_Account(CLIENT to_show)
 {
+    float savings_show = to_show.savings / 100.0;
+    float balance_show = to_show.balance / 100.0;
     printf("\n");
     printf("ID: %ld\n", to_show.ID);
     printf("NAME: %s\n", to_show.name);
     printf("SURNAME: %s\n", to_show.surname);
     printf("PESEL: %s\n", to_show.pesel);
     printf("ADDRESS: %s\n", to_show.address);
-    printf("BALANCE: %lf\n", to_show.balance);
-    printf("SAVINGS: %lf\n", to_show.savings);
+    printf("BALANCE: %.2f\n", balance_show);
+    printf("SAVINGS: %.2f\n", savings_show);
     printf("\n");
 }
 
@@ -322,17 +328,17 @@ CLIENT *Search_Account()
     printf("3. Surname\n");
     printf("4. Pesel\n");
     printf("5. Address\n");
-    scanf("%d", &decision);
-    Clear_Buff();
+    while(scanf("%d", &decision)!=1)
+        Clear_Buff();
     if (decision == 1)
     {
         printf("\nProvide ID you are looking for: ");
-        scanf("%ld", &key_ID);
+        while(scanf("%ld", &key_ID) != 1)
+            Clear_Buff();
     }
     else if (decision > 1 && decision < 6)
     {
         printf("\nProvide what you are looking for: ");
-        //scanf("%s", key_string); // HERE MUST BE IMPROVED! PROBABLY <--------------------------------------------------------------------------------------------------
         My_Scanf(key_string, MAX);
     }
     else
@@ -432,11 +438,14 @@ void Make_Deposit()
         return;
     CLIENT curr_client = *ptr_curr_client;
     CLIENT new_client = curr_client;
-    double sum;
+    float get_sum;
+    long int sum;
     printf("How much do you want to deposit?\n");
-    scanf("%lf", &sum);
-    Clear_Buff();
-    if(!Check_Money(sum, curr_client.balance, FALSE))
+    printf("WARNING! Every digit after 2 decimal places will be cut down\n");
+    while(scanf("%f", &get_sum) != 1)
+        Clear_Buff();
+    sum = get_sum * 100;
+    if (!Check_Money(sum, curr_client.balance, FALSE))
         return;
     new_client.balance += sum;
     if (confirmation())
@@ -448,7 +457,8 @@ void Make_Transfer()
     CLIENT transfer_from, from_orginal;
     CLIENT transfer_to, to_orginal;
     CLIENT *ptr_client;
-    double sum;
+    long int sum;
+    float get_sum;
     printf("\nFrom what account do you want to make transfer?\n");
     ptr_client = Search_Account();
     if (!ptr_client)
@@ -460,9 +470,11 @@ void Make_Transfer()
         return;
     transfer_to = to_orginal = *ptr_client;
     printf("How much do you want to transfer?\n");
-    scanf("%lf", &sum);
-    Clear_Buff();
-    if(!Check_Money(sum, transfer_from.balance, TRUE))
+    printf("WARNING! Every digit after 2 decimal places will be cut down\n");
+    while(scanf("%f", &get_sum) != 1)
+        Clear_Buff();
+    sum = get_sum * 100;
+    if (!Check_Money(sum, transfer_from.balance, TRUE))
         return;
     transfer_from.balance -= sum;
     transfer_to.balance += sum;
@@ -480,11 +492,14 @@ void Transfer_To_Savings()
         return;
     CLIENT curr_client = *ptr_client;
     CLIENT new_client = curr_client;
-    double sum;
+    long int sum;
+    float get_sum;
     printf("How much do you want to transfer to savings?\n");
-    scanf("%lf", &sum);
-    Clear_Buff();
-    if(!Check_Money(sum, curr_client.balance, TRUE))
+    printf("WARNING! Every digit after 2 decimal places will be cut down\n");
+    while(scanf("%f", &get_sum) != 1)
+        Clear_Buff();
+    sum = get_sum * 100;
+    if (!Check_Money(sum, curr_client.balance, TRUE))
         return;
     new_client.balance -= sum;
     new_client.savings += sum;
@@ -499,11 +514,14 @@ void Transfer_From_Savings()
         return;
     CLIENT curr_client = *ptr_client;
     CLIENT new_client = curr_client;
-    double sum;
+    long int sum;
+    float get_sum;
     printf("How much do you want to transfer from savings?\n");
-    scanf("%lf", &sum);
-    Clear_Buff();
-    if(!Check_Money(sum, curr_client.savings, TRUE))
+    printf("WARNING! Every digit after 2 decimal places will be cut down\n");
+    while(scanf("%f", &get_sum) != 1)
+        Clear_Buff();
+    sum = get_sum * 100;
+    if (!Check_Money(sum, curr_client.savings, TRUE))
         return;
     new_client.balance += sum;
     new_client.savings -= sum;
@@ -518,11 +536,14 @@ void Withdraw()
         return;
     CLIENT curr_client = *ptr_client;
     CLIENT new_client = curr_client;
-    double sum;
+    long int sum;
+    float get_sum;
     printf("How much do you want to withdraw?\n");
-    scanf("%lf", &sum);
-    Clear_Buff();
-    if(!Check_Money(sum, curr_client.balance, TRUE))
+    printf("WARNING! Every digit after 2 decimal places will be cut down\n");
+    while(scanf("%f", &get_sum) != 1)
+        Clear_Buff();
+    sum = get_sum * 100;
+    if (!Check_Money(sum, curr_client.balance, TRUE))
         return;
     new_client.balance -= sum;
     if (confirmation())
